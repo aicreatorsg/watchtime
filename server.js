@@ -1,5 +1,5 @@
 const express = require('express');
-const { exec } = require('child_process');
+const play = require('play-dl');
 const app = express();
 const port = process.env.PORT || 3000;
 
@@ -9,46 +9,56 @@ let activeStreams = 0;
 
 async function startVideoStream() {
     try {
+        // Get video info
+        const videoInfo = await play.video_info(VIDEO_URL);
+        console.log(`Starting streams for video: ${videoInfo.video_details.title}`);
+
         // Start multiple instances
         const startInstances = async () => {
-            const promises = [];
             const BATCH_SIZE = 50;
             
             for (let i = 0; i < NUM_INSTANCES; i += BATCH_SIZE) {
                 const currentBatch = Math.min(BATCH_SIZE, NUM_INSTANCES - i);
                 console.log(`Starting batch ${i / BATCH_SIZE + 1}, size: ${currentBatch}`);
                 
+                const batchPromises = [];
                 for (let j = 0; j < currentBatch; j++) {
-                    const promise = new Promise((resolve, reject) => {
-                        const process = exec(`yt-dlp ${VIDEO_URL} --no-warnings --no-call-home --format worst -o - > /dev/null`, 
-                            (error, stdout, stderr) => {
-                                if (error) {
-                                    console.error(`Stream error: ${error.message}`);
-                                    reject(error);
-                                    return;
-                                }
-                                resolve();
-                            }
-                        );
+                    const promise = new Promise(async (resolve, reject) => {
+                        try {
+                            const stream = await play.stream(VIDEO_URL, {
+                                quality: 144, // Lowest quality
+                                discordPlayerCompatibility: false
+                            });
+                            
+                            // Create a dummy stream that consumes data but doesn't store it
+                            const dummyStream = {
+                                write: () => {},
+                                end: () => {}
+                            };
+
+                            stream.stream.pipe(dummyStream);
+                            activeStreams++;
+                            resolve();
+                        } catch (error) {
+                            console.error('Stream error:', error);
+                            reject(error);
+                        }
                     });
-                    promises.push(promise);
-                    activeStreams++;
+                    batchPromises.push(promise);
                 }
+                
+                await Promise.allSettled(batchPromises);
+                console.log(`Batch ${i / BATCH_SIZE + 1} completed. Active streams: ${activeStreams}`);
                 
                 // Wait a bit between batches to prevent overwhelming the system
                 await new Promise(resolve => setTimeout(resolve, 2000));
             }
-            
-            return Promise.all(promises);
         };
 
-        // Start the instances and handle completion
+        // Start the instances
         console.log('Starting video streams...');
-        startInstances().then(() => {
-            console.log('All streams started successfully');
-        }).catch(err => {
-            console.error('Error in stream batch:', err);
-        });
+        await startInstances();
+        console.log('All streams started successfully');
 
     } catch (error) {
         console.error('Error starting video streams:', error);
