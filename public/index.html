@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YouTube Multi-Player</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+            background: #f0f0f0;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .input-container {
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        #videoUrl {
+            width: 80%;
+            padding: 10px;
+            margin-right: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        #playButton {
+            padding: 10px 20px;
+            background-color: #ff0000;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        #playButton:hover {
+            background-color: #cc0000;
+        }
+        .grid-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+            gap: 10px;
+            padding: 10px;
+        }
+        .video-container {
+            width: 160px;
+            height: 90px;
+            background: #000;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 style="text-align: center;">YouTube Multi-Player</h1>
+        <div class="input-container">
+            <input type="text" id="videoUrl" placeholder="Enter YouTube video URL">
+            <button id="playButton">Play in 1000 Players</button>
+        </div>
+        <div id="gridContainer" class="grid-container"></div>
+    </div>
+
+    <script>
+        function getVideoId(url) {
+            const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
+            const match = url.match(regExp);
+            return match && match[2].length === 11 ? match[2] : null;
+        }
+
+        function createVideoPlayers() {
+            const url = document.getElementById('videoUrl').value;
+            const videoId = getVideoId(url);
+            
+            if (!videoId) {
+                alert('Please enter a valid YouTube URL');
+                return;
+            }
+
+            const gridContainer = document.getElementById('gridContainer');
+            gridContainer.innerHTML = ''; // Clear existing content
+
+            // Create 1000 iframes
+            for (let i = 0; i < 1000; i++) {
+                const videoContainer = document.createElement('div');
+                videoContainer.className = 'video-container';
+                
+                const iframe = document.createElement('iframe');
+                iframe.width = '160';
+                iframe.height = '90';
+                iframe.src = `https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1&controls=0&showinfo=0`;
+                iframe.frameBorder = '0';
+                iframe.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture';
+                
+                videoContainer.appendChild(iframe);
+                gridContainer.appendChild(videoContainer);
+            }
+        }
+
+        document.getElementById('playButton').addEventListener('click', createVideoPlayers);
+    </script>
+</body>
+</html>
